@@ -1,9 +1,8 @@
 package com.socialapp.socialmedia.controller;
 
 import com.socialapp.socialmedia.model.Post;
-import com.socialapp.socialmedia.model.User;
 import com.socialapp.socialmedia.repository.PostRepository;
-import com.socialapp.socialmedia.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,39 +11,30 @@ import java.util.List;
 @RequestMapping("/posts")
 public class PostController {
 
-    private final PostRepository postRepository;
-    private final UserRepository userRepository;
+    @Autowired
+    private PostRepository postRepository;
 
-    public PostController(PostRepository postRepository, UserRepository userRepository) {
-        this.postRepository = postRepository;
-        this.userRepository = userRepository;
+    // Create a new post
+    @PostMapping
+    public Post createPost(@RequestBody Post post) {
+        return postRepository.save(post);
     }
 
+    // Get all posts
     @GetMapping
     public List<Post> getAllPosts() {
         return postRepository.findAll();
     }
 
-    @PostMapping
-    public Post createPost(@RequestParam Long userId,
-                           @RequestParam String content,
-                           @RequestParam(required = false) String imageUrl) {
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        Post post = new Post();
-        post.setUser(user);
-        post.setContent(content);
-        post.setImageUrl(imageUrl);
-
-        return postRepository.save(post);
-    }
-
+    // Delete a post by id
     @DeleteMapping("/{id}")
     public String deletePost(@PathVariable Long id) {
+        if (!postRepository.existsById(id)) {
+            return "Post not found";
+        }
         postRepository.deleteById(id);
-        return "Post deleted";
+        return "Post deleted successfully";
     }
 }
+
 

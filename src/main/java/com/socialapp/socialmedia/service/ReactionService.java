@@ -4,6 +4,8 @@ import com.socialapp.socialmedia.model.*;
 import com.socialapp.socialmedia.repository.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -61,5 +63,20 @@ public class ReactionService {
     public int countReactionsForComment(Long commentId) {
         return reactionRepository.countByCommentId(commentId);
     }
+    
+ // Count reactions grouped by type for a post
+    public Map<String, Integer> countReactionsForPostByType(Long postId) {
+        List<Reaction> reactions = reactionRepository.findByPostId(postId);
+        return reactions.stream()
+                .collect(Collectors.groupingBy(r -> r.getType().name(), Collectors.summingInt(r -> 1)));
+    }
+
+    // Count reactions grouped by type for a comment
+    public Map<String, Integer> countReactionsForCommentByType(Long commentId) {
+        List<Reaction> reactions = reactionRepository.findByCommentId(commentId);
+        return reactions.stream()
+                .collect(Collectors.groupingBy(r -> r.getType().name(), Collectors.summingInt(r -> 1)));
+    }
+
 }
 

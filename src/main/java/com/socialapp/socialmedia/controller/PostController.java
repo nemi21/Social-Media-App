@@ -58,6 +58,25 @@ public class PostController {
                 })
                 .collect(Collectors.toList());
     }
+    
+    @GetMapping("/{id}")
+    public PostResponseDTO getPostById(@PathVariable Long id) {
+        Post post = postRepository.findById(id).orElseThrow(() -> new RuntimeException("Post not found"));
+
+        int likeCount = likeService.countLikesForPost(post.getId());
+        Map<String, Integer> reactionCounts = reactionService.countReactionsForPostByType(post.getId());
+
+        List<CommentResponseDTO> commentDTOs = commentRepository.findByPostId(post.getId()).stream()
+                .map(c -> new CommentResponseDTO(
+                        c,
+                        likeService.countLikesForComment(c.getId()),
+                        reactionService.countReactionsForCommentByType(c.getId())
+                ))
+                .toList();
+
+        return new PostResponseDTO(post, likeCount, reactionCounts, commentDTOs);
+    }
+
 
     // Delete a post by id
     @DeleteMapping("/{id}")

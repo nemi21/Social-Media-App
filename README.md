@@ -4,23 +4,23 @@ A Java Spring Boot project for a social media application with user management, 
 
 Features
 User Management (CRUD)
-  Create, read, update, delete users
+  -Create, read, update, delete users
 Follow / Unfollow Users
-  Users can follow and unfollow each other
-  View followers and following lists
-  Handles edge cases like self-follow or duplicate follows
+  -Users can follow and unfollow each other
+  -View followers and following lists
+  -Handles edge cases like self-follow or duplicate follows
 Posts
-  Users can create and delete posts
-  Retrieve posts with associated likes, reactions, and comments
+  -Users can create and delete posts
+  -Retrieve posts with associated likes, reactions, and comments
 Likes
-  Users can like posts and comments
-  Count total likes
+  -Users can like posts and comments
+  -Count total likes
 Reactions
-  Users can react to posts and comments with different reaction types
-  Count reactions per type
+  -Users can react to posts and comments with different reaction types
+  -Count reactions per type
 REST APIs with DTOs for clean responses
 Custom Exceptions & Error Handling
-  Provides clear JSON responses for invalid operations
+  -Provides clear JSON responses for invalid operations
 
 MySQL Integration
   Database-driven application with tables: users, posts, comments, follows, likes, reactions

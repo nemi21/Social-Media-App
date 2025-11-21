@@ -77,6 +77,17 @@ public class ReactionService {
         return reactions.stream()
                 .collect(Collectors.groupingBy(r -> r.getType().name(), Collectors.summingInt(r -> 1)));
     }
+    
+    public void deleteReactionsForComment(Long commentId) {
+        reactionRepository.deleteByCommentId(commentId);
+    }
+    
+ // Delete reactions for a specific post
+    public void deleteReactionsForPost(Long postId) {
+        reactionRepository.deleteByPostId(postId);
+    }
+
+
 
 }
 

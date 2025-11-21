@@ -78,15 +78,31 @@ public class PostController {
     }
 
 
-    // Delete a post by id
     @DeleteMapping("/{id}")
     public String deletePost(@PathVariable Long id) {
-        if (!postRepository.existsById(id)) {
-            return "Post not found";
+        Post post = postRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Post not found"));
+
+        // 1️⃣ Delete likes & reactions for all comments of this post
+        List<Comment> comments = commentRepository.findByPostId(post.getId());
+        for (Comment c : comments) {
+            likeService.deleteLikesForComment(c.getId());
+            reactionService.deleteReactionsForComment(c.getId());
         }
-        postRepository.deleteById(id);
+
+        // 2️⃣ Delete comments themselves
+        commentRepository.deleteAll(comments);
+
+        // 3️⃣ Delete likes and reactions for the post itself
+        likeService.deleteLikesForPost(post.getId());
+        reactionService.deleteReactionsForPost(post.getId());
+
+        // 4️⃣ Delete the post
+        postRepository.delete(post);
+
         return "Post deleted successfully";
     }
+
 }
 
 

@@ -60,5 +60,16 @@ public class LikeService {
                 .orElseThrow(() -> new RuntimeException("Comment not found"));
         return likeRepository.findByComment(comment).size();
     }
-}
 
+    public void deleteLikesForComment(Long commentId) {
+        likeRepository.deleteByCommentId(commentId);
+    }
+    
+ // Delete likes for a specific post
+    public void deleteLikesForPost(Long postId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found"));
+        likeRepository.deleteByPostId(post.getId());
+    }
+
+}

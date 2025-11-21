@@ -1,12 +1,11 @@
 package com.socialapp.socialmedia.controller;
 
-import com.socialapp.socialmedia.dto.FollowUserDTO;
+import com.socialapp.socialmedia.dto.UserSummaryDTO;
 import com.socialapp.socialmedia.service.FollowService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/users")
@@ -27,15 +26,24 @@ public class FollowController {
         return ResponseEntity.ok("Unfollowed successfully");
     }
 
+    // Paginated followers
     @GetMapping("/{userId}/followers")
-    public ResponseEntity<List<FollowUserDTO>> getFollowers(@PathVariable Long userId) {
-        return ResponseEntity.ok(followService.getFollowersDTO(userId));
+    public ResponseEntity<Page<UserSummaryDTO>> getFollowers(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(followService.getFollowersPaginated(userId, page, size));
     }
 
+    // Paginated following
     @GetMapping("/{userId}/following")
-    public ResponseEntity<List<FollowUserDTO>> getFollowing(@PathVariable Long userId) {
-        return ResponseEntity.ok(followService.getFollowingDTO(userId));
+    public ResponseEntity<Page<UserSummaryDTO>> getFollowing(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(followService.getFollowingPaginated(userId, page, size));
     }
 }
+
 
 

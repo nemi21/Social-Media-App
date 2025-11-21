@@ -1,6 +1,7 @@
 package com.socialapp.socialmedia.service;
 
 import com.socialapp.socialmedia.dto.FollowUserDTO;
+import com.socialapp.socialmedia.dto.UserSummaryDTO;
 import com.socialapp.socialmedia.exception.*;
 import com.socialapp.socialmedia.model.Follow;
 import com.socialapp.socialmedia.model.User;
@@ -8,6 +9,11 @@ import com.socialapp.socialmedia.repository.FollowRepository;
 import com.socialapp.socialmedia.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import java.util.stream.Collectors;
+
 
 import java.util.List;
 
@@ -67,6 +73,48 @@ public class FollowService {
                         f.getFollowing().getUsername()
                 ))
                 .toList();
+    }
+    
+    public Page<UserSummaryDTO> getFollowersPaginated(Long userId, int page, int size) {
+        User user = userRepository.findById(userId)
+        		.orElseThrow(() -> new UserNotFoundException("User not found"));
+        
+        PageRequest pageRequest = PageRequest.of(page, size);
+        
+        var followersList = user.getFollowers().stream()
+                .map(f -> new UserSummaryDTO(
+                        f.getFollower().getId(),
+                        f.getFollower().getUsername(),
+                        f.getFollower().getBio(),
+                        f.getFollower().getAvatarUrl()
+                ))
+                .collect(Collectors.toList());
+
+        int start = Math.min((int) pageRequest.getOffset(), followersList.size());
+        int end = Math.min((start + pageRequest.getPageSize()), followersList.size());
+        
+        return new PageImpl<>(followersList.subList(start, end), pageRequest, followersList.size());
+    }
+
+    public Page<UserSummaryDTO> getFollowingPaginated(Long userId, int page, int size) {
+        User user = userRepository.findById(userId)
+        		.orElseThrow(() -> new UserNotFoundException("User not found"));
+        
+        PageRequest pageRequest = PageRequest.of(page, size);
+
+        var followingList = user.getFollowing().stream()
+                .map(f -> new UserSummaryDTO(
+                        f.getFollowing().getId(),
+                        f.getFollowing().getUsername(),
+                        f.getFollowing().getBio(),
+                        f.getFollowing().getAvatarUrl()
+                ))
+                .collect(Collectors.toList());
+
+        int start = Math.min((int) pageRequest.getOffset(), followingList.size());
+        int end = Math.min((start + pageRequest.getPageSize()), followingList.size());
+
+        return new PageImpl<>(followingList.subList(start, end), pageRequest, followingList.size());
     }
 }
 

@@ -14,24 +14,41 @@ public class LikeController {
         this.likeService = likeService;
     }
 
+    // ---------------------- LIKE POST ------------------------
     @PostMapping("/post/{postId}/user/{userId}")
     public Like likePost(@PathVariable Long postId, @PathVariable Long userId) {
         return likeService.likePost(userId, postId);
     }
 
+    // ---------------------- LIKE COMMENT ------------------------
     @PostMapping("/comment/{commentId}/user/{userId}")
     public Like likeComment(@PathVariable Long commentId, @PathVariable Long userId) {
         return likeService.likeComment(userId, commentId);
     }
 
+    // ---------------------- COUNT ------------------------
     @GetMapping("/post/{postId}/count")
-    public int getPostLikes(@PathVariable Long postId) {
+    public int countLikesForPost(@PathVariable Long postId) {
         return likeService.countLikesForPost(postId);
     }
 
     @GetMapping("/comment/{commentId}/count")
-    public int getCommentLikes(@PathVariable Long commentId) {
+    public int countLikesForComment(@PathVariable Long commentId) {
         return likeService.countLikesForComment(commentId);
     }
+
+    // ---------------------- DELETE ------------------------
+    @DeleteMapping("/post/{postId}")
+    public String deleteLikesForPost(@PathVariable Long postId) {
+        likeService.deleteLikesForPost(postId);
+        return "All likes for post deleted successfully";
+    }
+
+    @DeleteMapping("/comment/{commentId}")
+    public String deleteLikesForComment(@PathVariable Long commentId) {
+        likeService.deleteLikesForComment(commentId);
+        return "All likes for comment deleted successfully";
+    }
 }
+
 

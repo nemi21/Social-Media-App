@@ -2,66 +2,69 @@ package com.socialapp.socialmedia.controller;
 
 import com.socialapp.socialmedia.dto.CommentResponseDTO;
 import com.socialapp.socialmedia.model.Comment;
-import com.socialapp.socialmedia.repository.CommentRepository;
-import com.socialapp.socialmedia.service.LikeService;
-import com.socialapp.socialmedia.service.ReactionService;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import com.socialapp.socialmedia.service.CommentService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/comments")
 public class CommentController {
 
-    private final CommentRepository commentRepository;
-    private final LikeService likeService;
-    private final ReactionService reactionService;
+    private final CommentService commentService;
 
-    public CommentController(CommentRepository commentRepository,
-                             LikeService likeService,
-                             ReactionService reactionService) {
-        this.commentRepository = commentRepository;
-        this.likeService = likeService;
-        this.reactionService = reactionService;
+    public CommentController(CommentService commentService) {
+        this.commentService = commentService;
     }
 
-    // Create comment
+    // -------------------- CREATE --------------------
+
     @PostMapping
     public Comment createComment(@RequestBody Comment comment) {
-        return commentRepository.save(comment);
+        return commentService.createComment(comment);
     }
 
-    // Get comments by post with likes & reactions
+    // -------------------- READ --------------------
+
     @GetMapping("/post/{postId}")
     public List<CommentResponseDTO> getCommentsByPost(@PathVariable Long postId) {
-        return commentRepository.findByPostId(postId).stream()
-                .map(c -> new CommentResponseDTO(
-                        c,
-                        likeService.countLikesForComment(c.getId()),
-                        reactionService.countReactionsForCommentByType(c.getId())
-                ))
-                .toList();
+        return commentService.getCommentsByPost(postId);
     }
 
-    // Delete comment
-    @DeleteMapping("/{id}")
-    public String deleteComment(@PathVariable Long id) {
-        if (!commentRepository.existsById(id)) {
-            return "Comment not found";
+    @GetMapping("/{id}")
+    public CommentResponseDTO getCommentById(@PathVariable Long id) {
+        Comment comment = commentService.getComment(id);
+
+        return new CommentResponseDTO(
+                comment,
+                commentService.getLikeService().countLikesForComment(comment.getId()),
+                commentService.getReactionService().countReactionsForCommentByType(comment.getId())
+        );
+    }
+
+ // -------------------- UPDATE --------------------
+    @PutMapping("/{id}")
+    public Comment updateComment(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        // Expect JSON: { "content": "new comment text" }
+        String newContent = body.get("content");
+        if (newContent == null || newContent.isBlank()) {
+            throw new RuntimeException("Content must not be empty");
         }
+        return commentService.updateComment(id, newContent);
+    }
 
-        // Delete likes associated with the comment first
-        likeService.deleteLikesForComment(id);
-
-        // Delete reactions associated with the comment first
-        reactionService.deleteReactionsForComment(id);
-
-        // Now delete the comment itself
-        commentRepository.deleteById(id);
-
-        return "Comment deleted successfully";
+    // -------------------- DELETE --------------------
+    @DeleteMapping("/{id}")
+    public Map<String, Object> deleteComment(@PathVariable Long id) {
+        Comment comment = commentService.getComment(id); // throws exception if not found
+        commentService.deleteComment(id);
+        return Map.of(
+            "message", "Comment deleted successfully",
+            "deletedCommentId", comment.getId(),
+            "content", comment.getContent()
+        );
     }
 
 }
+

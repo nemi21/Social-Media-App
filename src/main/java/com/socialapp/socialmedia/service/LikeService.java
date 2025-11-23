@@ -3,8 +3,7 @@ package com.socialapp.socialmedia.service;
 import com.socialapp.socialmedia.model.*;
 import com.socialapp.socialmedia.repository.*;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class LikeService {
@@ -25,51 +24,63 @@ public class LikeService {
     }
 
     // ---------------------- LIKE POST ------------------------
+    @Transactional
     public Like likePost(Long userId, Long postId) {
         User user = getUser(userId);
         Post post = getPost(postId);
 
         // Check if user already liked this post
         likeRepository.findByUserAndPost(user, post)
-                .ifPresent(l -> { throw new RuntimeException("User already liked this post"); });
+                .ifPresent(l -> { 
+                    throw new RuntimeException("User already liked this post"); 
+                });
 
         Like like = new Like(user, post, null);
         return likeRepository.save(like);
     }
 
     // ---------------------- LIKE COMMENT ------------------------
+    @Transactional
     public Like likeComment(Long userId, Long commentId) {
         User user = getUser(userId);
         Comment comment = getComment(commentId);
 
         // Check if user already liked this comment
         likeRepository.findByUserAndComment(user, comment)
-                .ifPresent(l -> { throw new RuntimeException("User already liked this comment"); });
+                .ifPresent(l -> { 
+                    throw new RuntimeException("User already liked this comment"); 
+                });
 
         Like like = new Like(user, null, comment);
         return likeRepository.save(like);
     }
 
-    // ---------------------- COUNT ------------------------
+    // ---------------------- COUNT (OPTIMIZED) ------------------------
     public int countLikesForPost(Long postId) {
-        Post post = getPost(postId);
-        return likeRepository.findByPost(post).size();
+        // ✅ Uses database COUNT instead of loading all likes
+        return likeRepository.countByPostId(postId);
     }
 
     public int countLikesForComment(Long commentId) {
-        Comment comment = getComment(commentId);
-        return likeRepository.findByComment(comment).size();
+        // ✅ Uses database COUNT instead of loading all likes
+        return likeRepository.countByCommentId(commentId);
     }
 
     // ---------------------- DELETE ------------------------
+    @Transactional
     public void deleteLikesForPost(Long postId) {
-        Post post = getPost(postId);
-        likeRepository.deleteByPostId(post.getId());
+        if (!postRepository.existsById(postId)) {
+            throw new RuntimeException("Post not found: " + postId);
+        }
+        likeRepository.deleteByPostId(postId);
     }
 
+    @Transactional
     public void deleteLikesForComment(Long commentId) {
-        Comment comment = getComment(commentId);
-        likeRepository.deleteByCommentId(comment.getId());
+        if (!commentRepository.existsById(commentId)) {
+            throw new RuntimeException("Comment not found: " + commentId);
+        }
+        likeRepository.deleteByCommentId(commentId);
     }
 
     // ---------------------- VALIDATION HELPERS ------------------------

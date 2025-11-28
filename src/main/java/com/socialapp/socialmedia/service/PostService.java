@@ -71,7 +71,7 @@ public class PostService {
     }
 
     // -------- Helper to map Post → PostResponseDTO ----------
-    private PostResponseDTO mapToDTO(Post post) {
+    public PostResponseDTO mapToDTO(Post post) {
         int likeCount = likeService.countLikesForPost(post.getId());
         Map<String, Integer> reactionCounts =
                 reactionService.countReactionsForPostByType(post.getId());

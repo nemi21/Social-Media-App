@@ -1,6 +1,13 @@
 package com.socialapp.socialmedia.service;
 
 import com.socialapp.socialmedia.exception.UserNotFoundException;
+import com.socialapp.socialmedia.dto.UserProfileDTO;
+import com.socialapp.socialmedia.repository.PostRepository;
+import com.socialapp.socialmedia.repository.FollowRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import java.util.List;
+import java.util.stream.Collectors;
 import com.socialapp.socialmedia.model.User;
 import com.socialapp.socialmedia.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,11 +21,16 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PostRepository postRepository;
+    private final FollowRepository followRepository;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, 
+            PostRepository postRepository, FollowRepository followRepository) {
+this.userRepository = userRepository;
+this.passwordEncoder = passwordEncoder;
+this.postRepository = postRepository;
+this.followRepository = followRepository;
+}
 
     // -------------------- CREATE --------------------
     public User createUser(User user) {
@@ -100,5 +112,37 @@ public class UserService {
     // -------------------- VALIDATION --------------------
     public boolean existsById(Long id) {
         return userRepository.existsById(id);
+    }
+    
+    public UserProfileDTO getUserProfile(Long userId, Long currentUserId) {
+        User user = getUserById(userId);
+        
+        int postCount = postRepository.countByUserId(userId);
+        int followerCount = followRepository.countByFollowingId(userId);
+        int followingCount = followRepository.countByFollowerId(userId);
+        
+        boolean isFollowing = currentUserId != null && 
+                             followRepository.existsByFollowerIdAndFollowingId(currentUserId, userId);
+        
+        return new UserProfileDTO(
+            user.getId(),
+            user.getUsername(),
+            user.getEmail(),
+            user.getBio(),
+            user.getAvatarUrl(),
+            user.getCreatedAt(),
+            postCount,
+            followerCount,
+            followingCount,
+            isFollowing
+        );
+    }
+
+    // -------------------- SEARCH USERS --------------------
+    public List<User> searchUsers(String keyword) {
+        List<User> allUsers = userRepository.findAll();
+        return allUsers.stream()
+            .filter(user -> user.getUsername().toLowerCase().contains(keyword.toLowerCase()))
+            .collect(Collectors.toList());
     }
 }

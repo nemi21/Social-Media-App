@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "posts",
@@ -28,25 +30,46 @@ public class Post {
     @Column(length = 5000)
     private String content;
 
-    private String imageUrl;
+    // ✅ CHANGED: Support multiple images (stored as comma-separated URLs)
+    @Column(length = 2000)
+    private String imageUrls; // e.g., "url1,url2,url3"
+
+    // ✅ NEW: Track if this is a shared/reposted post
+    private Long originalPostId; // If this is a repost, reference to original
 
     private LocalDateTime createdAt = LocalDateTime.now();
-    
     private LocalDateTime updatedAt;
 
     // ===== Constructors =====
     public Post() {}
 
-    public Post(Long userId, String content, String imageUrl) {
+    public Post(Long userId, String content, String imageUrls) {
         this.userId = userId;
         this.content = content;
-        this.imageUrl = imageUrl;
+        this.imageUrls = imageUrls;
     }
 
     // ===== Lifecycle Callbacks =====
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    // ===== Helper Methods for Multiple Images =====
+    @Transient
+    public List<String> getImageUrlList() {
+        if (imageUrls == null || imageUrls.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return List.of(imageUrls.split(","));
+    }
+
+    public void setImageUrlList(List<String> urls) {
+        if (urls == null || urls.isEmpty()) {
+            this.imageUrls = null;
+        } else {
+            this.imageUrls = String.join(",", urls);
+        }
     }
 
     // ===== Getters and setters =====
@@ -59,8 +82,11 @@ public class Post {
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
 
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public String getImageUrls() { return imageUrls; }
+    public void setImageUrls(String imageUrls) { this.imageUrls = imageUrls; }
+
+    public Long getOriginalPostId() { return originalPostId; }
+    public void setOriginalPostId(Long originalPostId) { this.originalPostId = originalPostId; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
@@ -68,5 +94,4 @@ public class Post {
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }
-
 

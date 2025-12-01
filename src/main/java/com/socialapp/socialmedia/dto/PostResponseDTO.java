@@ -8,7 +8,8 @@ public class PostResponseDTO {
     private Long id;
     private Long userId;
     private String content;
-    private String imageUrl;
+    private List<String> imageUrls;
+    private Long originalPostId;
     private int likeCount;
     private Map<String, Integer> reactionCounts;
     private List<CommentResponseDTO> comments;
@@ -17,7 +18,8 @@ public class PostResponseDTO {
         this.id = post.getId();
         this.userId = post.getUserId();
         this.content = post.getContent();
-        this.imageUrl = post.getImageUrl();
+        this.imageUrls = post.getImageUrlList();
+        this.originalPostId = post.getOriginalPostId();
         this.likeCount = likeCount;
         this.reactionCounts = reactionCounts;
         this.comments = comments;
@@ -27,9 +29,9 @@ public class PostResponseDTO {
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
     public String getContent() { return content; }
-    public String getImageUrl() { return imageUrl; }
+    public List<String> getImageUrls() { return imageUrls; }
+    public Long getOriginalPostId() { return originalPostId; }
     public int getLikeCount() { return likeCount; }
     public Map<String, Integer> getReactionCounts() { return reactionCounts; }
     public List<CommentResponseDTO> getComments() { return comments; }
 }
-

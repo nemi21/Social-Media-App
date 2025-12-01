@@ -1,6 +1,9 @@
 package com.socialapp.socialmedia.service;
 
 import com.socialapp.socialmedia.dto.CommentResponseDTO;
+import com.socialapp.socialmedia.dto.CreatePostRequest;
+import com.socialapp.socialmedia.dto.UpdatePostRequest;
+import com.socialapp.socialmedia.security.JwtUtil;
 import com.socialapp.socialmedia.dto.PostResponseDTO;
 import com.socialapp.socialmedia.model.Comment;
 import com.socialapp.socialmedia.model.Post;
@@ -85,6 +88,64 @@ public class PostService {
                 .toList();
 
         return new PostResponseDTO(post, likeCount, reactionCounts, commentDTOs);
+    }
+    
+ // -------- CREATE with DTO ----------
+    public Post createPostFromRequest(CreatePostRequest request, Long userId) {
+        Post post = new Post();
+        post.setUserId(userId);
+        post.setContent(request.getContent());
+        post.setImageUrlList(request.getImageUrls());
+        return postRepository.save(post);
+    }
+
+    // -------- UPDATE POST ----------
+    @Transactional
+    public Post updatePost(Long postId, UpdatePostRequest request, Long userId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found: " + postId));
+        
+        // Check if user owns this post
+        if (!post.getUserId().equals(userId)) {
+            throw new RuntimeException("You can only edit your own posts");
+        }
+        
+        post.setContent(request.getContent());
+        post.setImageUrlList(request.getImageUrls());
+        return postRepository.save(post);
+    }
+
+    // -------- SHARE/REPOST ----------
+    @Transactional
+    public Post sharePost(Long originalPostId, String additionalContent, Long userId) {
+        Post originalPost = postRepository.findById(originalPostId)
+                .orElseThrow(() -> new RuntimeException("Original post not found: " + originalPostId));
+        
+        Post sharedPost = new Post();
+        sharedPost.setUserId(userId);
+        sharedPost.setOriginalPostId(originalPostId);
+        
+        // Combine additional content with reference to original
+        String content = additionalContent != null && !additionalContent.isEmpty() 
+            ? additionalContent + "\n\n[Shared from @user" + originalPost.getUserId() + "]"
+            : "[Shared from @user" + originalPost.getUserId() + "]\n\n" + originalPost.getContent();
+        
+        sharedPost.setContent(content);
+        sharedPost.setImageUrlList(originalPost.getImageUrlList());
+        
+        return postRepository.save(sharedPost);
+    }
+
+    // -------- GET ORIGINAL POST (if it's a repost) ----------
+    public Post getOriginalPost(Long postId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found: " + postId));
+        
+        if (post.getOriginalPostId() != null) {
+            return postRepository.findById(post.getOriginalPostId())
+                    .orElse(null);
+        }
+        return null;
     }
 }
 

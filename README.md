@@ -1,6 +1,6 @@
 # Social Media App
 
-A secure, production-ready Java Spring Boot REST API for a social media application with JWT authentication, personalized feeds, user management, posts, comments, likes, reactions, and a follower/following system.
+A production-ready Java Spring Boot REST API for a full-featured social media application with JWT authentication, personalized feeds, nested comments with mentions, post editing/sharing, user management, and comprehensive engagement features.
 
 ## 🚀 Features
 
@@ -27,6 +27,9 @@ A secure, production-ready Java Spring Boot REST API for a social media applicat
 
 ### 📱 Posts & Content
 - ✅ **Create Posts** - Text content with optional image URLs
+- ✅ **Edit Posts** - Modify your posts after creation (with ownership validation)
+- ✅ **Multiple Images** - Support up to multiple images per post
+- ✅ **Share/Repost** - Share posts with optional commentary
 - ✅ **User Posts** - View all posts by a specific user (paginated)
 - ✅ **Delete Posts** - Remove posts with cascading deletion
 - ✅ **Search Posts** - Find posts by content/keywords
@@ -34,7 +37,11 @@ A secure, production-ready Java Spring Boot REST API for a social media applicat
 - ✅ **Timestamps** - Track creation and update times
 
 ### 💬 Comments & Engagement
-- ✅ **Comments** - Add, update, and delete comments on posts
+- ✅ **Nested Comments** - Unlimited reply depth (comments on comments on comments...)
+- ✅ **@Mentions** - Tag users with @username (automatically extracted)
+- ✅ **Comment Threads** - View entire conversation trees
+- ✅ **Edit Comments** - Update your comments
+- ✅ **Delete Comments** - Remove comments with cascading deletion
 - ✅ **Likes** - Like posts and comments (duplicate prevention built-in)
 - ✅ **Reactions** - React with LIKE, LOVE, HAHA, WOW, SAD, ANGRY
 - ✅ **Engagement Counts** - Real-time like and reaction counts
@@ -51,6 +58,7 @@ A secure, production-ready Java Spring Boot REST API for a social media applicat
 - ✅ **Data Integrity** - Unique constraints, foreign keys, cascading deletes
 - ✅ **Error Handling** - Clear, structured error responses with validation details
 - ✅ **Clean Architecture** - Controller → Service → Repository pattern
+- ✅ **Recursive Loading** - Efficient nested comment loading
 
 ---
 
@@ -187,10 +195,13 @@ The application will start on **http://localhost:8080**
 
 | Method | Endpoint | Description | Request Body | Auth Required |
 |--------|----------|-------------|--------------|---------------|
-| POST | `/posts` | Create a post | `{ "userId": 1, "content": "Hello World!", "imageUrl": "http://..." }` | Yes |
+| POST | `/posts` | Create a post | `{ "content": "Hello!", "imageUrls": ["url1", "url2"] }` | Yes |
 | GET | `/posts` | Get all posts with details | - | Yes |
 | GET | `/posts/{id}` | Get specific post | - | Yes |
+| PUT | `/posts/{id}` | Edit post (owner only) | `{ "content": "Updated!", "imageUrls": ["url"] }` | Yes |
 | DELETE | `/posts/{id}` | Delete post (cascades) | - | Yes |
+| POST | `/posts/{id}/share` | Share/repost | `{ "content": "Check this out!" }` (optional) | Yes |
+| GET | `/posts/{id}/original` | Get original post (for reposts) | - | Yes |
 
 ---
 
@@ -209,13 +220,13 @@ The application will start on **http://localhost:8080**
       "id": 1,
       "userId": 2,
       "content": "Great post!",
-      "imageUrl": null,
+      "imageUrls": ["https://example.com/photo.jpg"],
+      "originalPostId": null,
       "likeCount": 5,
       "reactionCounts": {"LOVE": 3, "HAHA": 1},
       "comments": [...]
     }
   ],
-  "pageable": {...},
   "totalElements": 42,
   "totalPages": 3
 }
@@ -223,15 +234,42 @@ The application will start on **http://localhost:8080**
 
 ---
 
-### 💬 Comments
+### 💬 Comments (Nested with Mentions)
 
 | Method | Endpoint | Description | Request Body | Auth Required |
 |--------|----------|-------------|--------------|---------------|
-| POST | `/comments` | Create a comment | `{ "postId": 1, "userId": 1, "content": "Nice post!" }` | Yes |
-| GET | `/comments/post/{postId}` | Get all comments for a post | - | Yes |
-| GET | `/comments/{id}` | Get comment by ID with likes/reactions | - | Yes |
+| POST | `/comments` | Create comment/reply | `{ "postId": 1, "content": "Nice! @john", "parentCommentId": 5 }` | Yes |
+| GET | `/comments/post/{postId}` | Get all comments (nested) | - | Yes |
+| GET | `/comments/{id}` | Get comment with replies | - | Yes |
+| GET | `/comments/{id}/replies` | Get direct replies | - | Yes |
+| GET | `/comments/{id}/replies/count` | Count replies | - | Yes |
 | PUT | `/comments/{id}` | Update comment | `{ "content": "Updated!" }` | Yes |
 | DELETE | `/comments/{id}` | Delete comment | - | Yes |
+
+**Nested Comment Response:**
+```json
+{
+  "id": 1,
+  "content": "Great post!",
+  "mentionedUsernames": [],
+  "replies": [
+    {
+      "id": 2,
+      "content": "I agree @testuser!",
+      "mentionedUsernames": ["testuser"],
+      "parentCommentId": 1,
+      "replies": [
+        {
+          "id": 5,
+          "content": "Me too!",
+          "parentCommentId": 2,
+          "replies": []
+        }
+      ]
+    }
+  ]
+}
+```
 
 ---
 
@@ -263,7 +301,7 @@ The application will start on **http://localhost:8080**
 
 ---
 
-## 🧪 Testing with cURL
+## 🧪 Testing Examples
 
 ### Register & Login
 ```bash
@@ -281,27 +319,50 @@ curl -X POST http://localhost:8080/auth/login \
 TOKEN="your_token_here"
 ```
 
-### Create & View Content
+### Create & Edit Posts
 ```bash
-# Create a post
+# Create post with multiple images
 curl -X POST http://localhost:8080/posts \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"userId":1,"content":"My first post"}'
+  -d '{"content":"Check out these photos!","imageUrls":["url1","url2","url3"]}'
 
-# Get personalized feed
-curl -X GET http://localhost:8080/api/feed?page=0&size=20 \
-  -H "Authorization: Bearer $TOKEN"
+# Edit post
+curl -X PUT http://localhost:8080/posts/1 \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"content":"Updated content!","imageUrls":["new-url"]}'
 
-# Get user profile
-curl -X GET http://localhost:8080/api/users/1/profile \
+# Share post
+curl -X POST http://localhost:8080/posts/1/share \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"content":"This is amazing!"}'
+```
+
+### Nested Comments with Mentions
+```bash
+# Create top-level comment
+curl -X POST http://localhost:8080/comments \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"postId":1,"content":"Great post @john!"}'
+
+# Reply to comment (nested)
+curl -X POST http://localhost:8080/comments \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"postId":1,"content":"I agree!","parentCommentId":1}'
+
+# Get comment thread
+curl -X GET http://localhost:8080/comments/post/1 \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 ### Social Features
 ```bash
-# Follow a user
-curl -X POST http://localhost:8080/users/1/follow/2 \
+# Get personalized feed
+curl -X GET http://localhost:8080/api/feed?page=0&size=20 \
   -H "Authorization: Bearer $TOKEN"
 
 # Search users
@@ -309,7 +370,7 @@ curl -X GET "http://localhost:8080/api/users/search?keyword=test" \
   -H "Authorization: Bearer $TOKEN"
 
 # Search posts
-curl -X GET "http://localhost:8080/api/feed/search?keyword=coding&page=0&size=10" \
+curl -X GET "http://localhost:8080/api/feed/search?keyword=coding" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -319,15 +380,17 @@ curl -X GET "http://localhost:8080/api/feed/search?keyword=coding&page=0&size=10
 
 ### Main Tables
 - **users** - User accounts with hashed passwords
-- **posts** - User posts with timestamps
-- **comments** - Comments on posts
+- **posts** - User posts with multiple images and repost tracking
+- **comments** - Comments with parent-child relationships for nesting
 - **likes** - Likes on posts and comments (with unique constraints)
 - **reactions** - Emoji reactions on posts and comments
 - **follows** - Follower/following relationships
 
-### Indexes
+### Key Indexes
 - `idx_post_user_id` - Fast post lookups by user
 - `idx_post_created_at` - Chronological post queries
+- `idx_comment_post_id` - Fast comment lookups by post
+- `idx_comment_parent_id` - Efficient nested comment queries
 - `idx_like_post_id`, `idx_like_comment_id` - Fast like counting
 - `idx_user_username`, `idx_user_email` - Fast user lookups
 
@@ -335,17 +398,19 @@ curl -X GET "http://localhost:8080/api/feed/search?keyword=coding&page=0&size=10
 - Unique constraints on likes to prevent duplicates
 - Foreign keys with cascading deletes
 - Email and username uniqueness
+- Validated parent comment relationships
 
 ---
 
 ## 🔒 Security Features
 
 - ✅ **JWT Token Authentication** - Stateless, scalable authentication
-- ✅ **BCrypt Password Hashing** - Passwords stored securely with salt (never in plain text)
+- ✅ **BCrypt Password Hashing** - Passwords stored securely with salt
 - ✅ **Password Hidden in Responses** - Passwords never returned in API responses
 - ✅ **Token Expiration** - Tokens expire after 24 hours (configurable)
 - ✅ **Request Filter Chain** - Automatic token validation on every request
-- ✅ **Input Validation** - Email format, password length, username constraints
+- ✅ **Ownership Validation** - Users can only edit their own posts/comments
+- ✅ **Input Validation** - Comprehensive validation with clear error messages
 - ✅ **SQL Injection Protection** - JPA parameterized queries
 - ✅ **CSRF Disabled** - For stateless REST API
 
@@ -353,19 +418,16 @@ curl -X GET "http://localhost:8080/api/feed/search?keyword=coding&page=0&size=10
 
 ## 🚧 Upcoming Features
 
-- [ ] Edit posts after creation
-- [ ] Multiple images per post
-- [ ] Share/repost functionality
-- [ ] Nested comment replies (comments on comments)
-- [ ] User tagging (@mentions)
-- [ ] Notifications system (likes, comments, follows)
+- [ ] Real-time notifications system (likes, comments, mentions, follows)
 - [ ] Trending posts algorithm
 - [ ] Popular users discovery
 - [ ] Private accounts (approve followers)
-- [ ] Image upload to cloud storage
+- [ ] Block users functionality
+- [ ] Image upload to cloud storage (AWS S3/Cloudinary)
 - [ ] Unit and integration tests
 - [ ] API rate limiting
 - [ ] Swagger/OpenAPI documentation
+- [ ] WebSocket support for real-time updates
 
 ---
 
@@ -379,9 +441,9 @@ src/main/java/com/socialapp/socialmedia/
 │   ├── AuthController.java              # Login/Register endpoints
 │   ├── UserController.java              # User CRUD endpoints
 │   ├── UserProfileController.java       # Profile & search endpoints
-│   ├── PostController.java              # Post endpoints
+│   ├── PostController.java              # Post CRUD/Edit/Share endpoints
 │   ├── FeedController.java              # Feed & search endpoints
-│   ├── CommentController.java           # Comment endpoints
+│   ├── CommentController.java           # Comment/Reply endpoints
 │   ├── LikeController.java              # Like endpoints
 │   ├── ReactionController.java          # Reaction endpoints
 │   └── FollowController.java            # Follow/unfollow endpoints
@@ -389,22 +451,22 @@ src/main/java/com/socialapp/socialmedia/
 │   ├── UserService.java                 # User business logic
 │   ├── CustomUserDetailsService.java    # Spring Security user loading
 │   ├── FeedService.java                 # Feed and search logic
-│   ├── PostService.java                 # Post business logic
-│   ├── CommentService.java              # Comment business logic
+│   ├── PostService.java                 # Post/Edit/Share logic
+│   ├── CommentService.java              # Comment/Reply logic (recursive)
 │   ├── LikeService.java                 # Like business logic
 │   ├── ReactionService.java             # Reaction business logic
 │   └── FollowService.java               # Follow business logic
 ├── repository/
 │   ├── UserRepository.java              # User data access
 │   ├── PostRepository.java              # Post data access (with feed queries)
-│   ├── CommentRepository.java           # Comment data access
+│   ├── CommentRepository.java           # Comment data access (nested queries)
 │   ├── LikeRepository.java              # Like data access
 │   ├── ReactionRepository.java          # Reaction data access
 │   └── FollowRepository.java            # Follow data access (with counts)
 ├── model/
 │   ├── User.java                        # User entity
-│   ├── Post.java                        # Post entity
-│   ├── Comment.java                     # Comment entity
+│   ├── Post.java                        # Post entity (multi-image, repost)
+│   ├── Comment.java                     # Comment entity (nested, mentions)
 │   ├── Like.java                        # Like entity
 │   ├── Reaction.java                    # Reaction entity
 │   ├── Follow.java                      # Follow entity
@@ -413,10 +475,13 @@ src/main/java/com/socialapp/socialmedia/
 │   ├── LoginRequest.java                # Login request DTO
 │   ├── LoginResponse.java               # Login response DTO
 │   ├── RegisterRequest.java             # Register request DTO
+│   ├── CreatePostRequest.java           # Post creation DTO
+│   ├── UpdatePostRequest.java           # Post update DTO
+│   ├── CreateCommentRequest.java        # Comment/Reply creation DTO
 │   ├── UserProfileDTO.java              # User profile with counts
 │   ├── UserSummaryDTO.java              # User summary response
 │   ├── PostResponseDTO.java             # Post with details
-│   └── CommentResponseDTO.java          # Comment with details
+│   └── CommentResponseDTO.java          # Comment with nested replies
 ├── security/
 │   ├── JwtUtil.java                     # JWT token generation/validation
 │   └── JwtAuthenticationFilter.java     # JWT request filter
@@ -426,6 +491,77 @@ src/main/java/com/socialapp/socialmedia/
 │   ├── AlreadyFollowingException.java
 │   └── CannotFollowSelfException.java
 └── SocialmediaApplication.java          # Main application class
+```
+
+---
+
+## 🎯 For Frontend Developers
+
+This API is fully ready for frontend integration (React, Vue, Angular, etc.):
+
+### Authentication Flow
+1. User registers/logs in via `/auth/register` or `/auth/login`
+2. Store the returned JWT token in localStorage
+3. Include token in all subsequent requests: `Authorization: Bearer <token>`
+4. Token expires after 24 hours - handle token refresh/re-login
+
+### Key Endpoints for Frontend
+- **User Feed:** `GET /api/feed` - Homepage feed with posts from followed users
+- **User Profile:** `GET /api/users/{id}/profile` - Profile page with stats
+- **User Posts:** `GET /api/users/{id}/posts` - User's post list
+- **Search:** `GET /api/users/search?keyword=` and `GET /api/feed/search?keyword=`
+- **Create Post:** `POST /posts` - New post form (supports multiple images)
+- **Edit Post:** `PUT /posts/{id}` - Edit post modal
+- **Share Post:** `POST /posts/{id}/share` - Repost functionality
+- **Nested Comments:** `GET /comments/post/{postId}` - Comment thread tree
+- **Reply to Comment:** `POST /comments` with `parentCommentId` - Reply functionality
+- **Follow:** `POST /users/{followerId}/follow/{followingId}` - Follow button
+
+### Example React Integration
+```javascript
+// Login
+const response = await fetch('http://localhost:8080/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ username, password })
+});
+const { token } = await response.json();
+localStorage.setItem('token', token);
+
+// Fetch personalized feed
+const feedResponse = await fetch('http://localhost:8080/api/feed?page=0&size=20', {
+  headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+});
+const feed = await feedResponse.json();
+
+// Create comment with mention
+await fetch('http://localhost:8080/comments', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    postId: 1,
+    content: 'Great post @username!',
+    parentCommentId: null // or comment ID for reply
+  })
+});
+
+// Render nested comments recursively
+function CommentTree({ comment }) {
+  return (
+    <div className="comment">
+      <p>{comment.content}</p>
+      <p>Mentions: {comment.mentionedUsernames.join(', ')}</p>
+      {comment.replies && comment.replies.map(reply =>
+        <div className="reply">
+          <CommentTree comment={reply} />
+        </div>
+      )}
+    </div>
+  );
+}
 ```
 
 ---
@@ -478,38 +614,32 @@ If you have any questions or run into issues:
 
 ---
 
-## 🎯 For Frontend Developers
+## 🏆 Features Highlights
 
-This API is fully ready for frontend integration (React, Vue, Angular, etc.):
+### What Makes This API Special:
 
-### Authentication Flow
-1. User registers/logs in via `/auth/register` or `/auth/login`
-2. Store the returned JWT token in localStorage
-3. Include token in all subsequent requests: `Authorization: Bearer <token>`
-4. Token expires after 24 hours - handle token refresh
+1. **Production-Ready Security** - JWT authentication with proper password hashing
+2. **Infinite Nested Comments** - Like Reddit/Twitter comment threads
+3. **Smart @Mentions** - Automatic username extraction
+4. **Multi-Image Posts** - Support for photo galleries
+5. **Repost Functionality** - Share posts with commentary
+6. **Personalized Feeds** - See only what matters to you
+7. **Comprehensive Search** - Find users and posts easily
+8. **Post Editing** - Fix typos after posting
+9. **Ownership Validation** - Can only edit your own content
+10. **Optimized Performance** - Database indexes and efficient queries
+11. **Frontend-Ready** - Clean API design perfect for React/Vue/Angular
 
-### Key Endpoints for Frontend
-- **User Feed:** `GET /api/feed` - Homepage feed
-- **User Profile:** `GET /api/users/{id}/profile` - Profile page
-- **User Posts:** `GET /api/users/{id}/posts` - User's post list
-- **Search:** `GET /api/users/search?keyword=` and `GET /api/feed/search?keyword=`
-- **Create Post:** `POST /posts` - New post form
-- **Follow:** `POST /users/{followerId}/follow/{followingId}` - Follow button
+### Current Statistics:
+- 50+ API Endpoints
+- 8 Core Entities
+- 4 Engagement Features
+- Infinite Comment Depth
+- Full CRUD Operations
+- JWT Security
+- Pagination Support
+- Search Functionality
 
-### Example React Integration
-```javascript
-// Login
-const response = await fetch('http://localhost:8080/auth/login', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ username, password })
-});
-const { token } = await response.json();
-localStorage.setItem('token', token);
+---
 
-// Fetch feed
-const feedResponse = await fetch('http://localhost:8080/api/feed?page=0&size=20', {
-  headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-});
-const feed = await feedResponse.json();
-```
+**Built with ❤️ using Spring Boot**
